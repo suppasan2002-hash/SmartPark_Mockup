@@ -1,0 +1,1611 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>SmartPark — ระบบแจ้งที่ว่างลานจอดรถอัจฉริยะ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink-900:#0A0F1D;
+    --ink-850:#0D1426;
+    --ink-800:#111A2E;
+    --ink-700:#182240;
+    --line:#22304F;
+    --line-soft:#182236;
+    --text-hi:#EAF0FA;
+    --text-mut:#8CA0C4;
+    --text-dim:#5D7092;
+    --teal:#22D3B8;
+    --teal-dim:#1A3B39;
+    --coral:#FF6B7A;
+    --coral-dim:#3A1F28;
+    --amber:#FBBF24;
+    --indigo:#6C7CFF;
+    --violet:#C084FC;
+    --violet-dim:#33204A;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{background:var(--ink-900); color:var(--text-hi);}
+  body{
+    font-family:'Inter','Noto Sans Thai',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    background:
+      radial-gradient(1100px 500px at 85% -10%, rgba(108,124,255,0.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 10%, rgba(34,211,184,0.06), transparent 55%),
+      var(--ink-900);
+    padding-bottom:60px;
+  }
+  .display{font-family:'Space Grotesk',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit;}
+
+  /* ===== Top bar ===== */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 32px; border-bottom:1px solid var(--line-soft);
+    background:linear-gradient(180deg, rgba(13,20,38,0.9), rgba(13,20,38,0.4));
+    backdrop-filter:blur(6px);
+    position:sticky; top:0; z-index:50;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:34px; height:34px; border-radius:9px;
+    background:linear-gradient(135deg, var(--indigo), var(--teal));
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.06), 0 6px 18px rgba(108,124,255,0.25);
+  }
+  .brand-mark svg{width:18px; height:18px;}
+  .brand-text .name{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:18px; letter-spacing:0.2px;}
+  .brand-text .sub{font-size:11.5px; color:var(--text-mut); letter-spacing:0.3px;}
+  .top-right{display:flex; align-items:center; gap:22px;}
+  .clock{text-align:right;}
+  .clock .time{font-family:'IBM Plex Mono',monospace; font-size:16px; font-weight:600;}
+  .clock .date{font-size:11px; color:var(--text-mut);}
+  .edge-status{
+    display:flex; align-items:center; gap:8px;
+    font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-mut);
+    padding:7px 12px; border:1px solid var(--line); border-radius:999px;
+    background:rgba(255,255,255,0.02);
+  }
+  .dot-live{width:7px; height:7px; border-radius:50%; background:var(--teal); box-shadow:0 0 0 0 rgba(34,211,184,0.6); animation:pulseDot 1.8s infinite;}
+  @keyframes pulseDot{
+    0%{box-shadow:0 0 0 0 rgba(34,211,184,0.55);}
+    70%{box-shadow:0 0 0 7px rgba(34,211,184,0);}
+    100%{box-shadow:0 0 0 0 rgba(34,211,184,0);}
+  }
+
+  /* ===== Hero strip ===== */
+  .hero{padding:34px 32px 10px;}
+  .hero-top{display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:18px; margin-bottom:22px;}
+  .hero h1{font-family:'Space Grotesk',sans-serif; font-size:30px; font-weight:600; line-height:1.25; max-width:640px;}
+  .hero h1 span{color:var(--teal);}
+  .hero p{color:var(--text-mut); font-size:13.5px; margin-top:8px; max-width:520px;}
+
+  .zone-tabs{display:flex; gap:8px; flex-wrap:wrap;}
+  .zone-tab{
+    font-family:'IBM Plex Mono',monospace; font-size:12.5px;
+    padding:9px 16px; border-radius:999px; border:1px solid var(--line);
+    color:var(--text-mut); cursor:pointer; background:rgba(255,255,255,0.02);
+    transition:all .15s ease; white-space:nowrap;
+  }
+  .zone-tab:hover{border-color:var(--indigo); color:var(--text-hi);}
+  .zone-tab.active{background:var(--indigo); border-color:var(--indigo); color:#fff;}
+  .zone-tab{display:inline-flex; align-items:center; gap:7px;}
+  .zone-tab .dot-warn{width:7px; height:7px; border-radius:50%; background:var(--amber); box-shadow:0 0 0 0 rgba(251,191,36,0.6); animation:pulseWarn 1.6s infinite;}
+  @keyframes pulseWarn{
+    0%{box-shadow:0 0 0 0 rgba(251,191,36,0.55);}
+    70%{box-shadow:0 0 0 6px rgba(251,191,36,0);}
+    100%{box-shadow:0 0 0 0 rgba(251,191,36,0);}
+  }
+  .zone-tab.near-full{border-color:rgba(251,191,36,0.55); color:var(--amber);}
+  .zone-tab.near-full.active{background:var(--amber); border-color:var(--amber); color:#241C02;}
+  .zone-tab.near-full.active .dot-warn{background:#241C02; box-shadow:none; animation:none;}
+
+  /* ===== AI Parking Recommendation ===== */
+  .reco-section{padding:22px 32px 0;}
+  .reco-panel{
+    border:1px solid rgba(108,124,255,0.35);
+    background:
+      radial-gradient(700px 260px at 100% 0%, rgba(108,124,255,0.14), transparent 60%),
+      radial-gradient(500px 220px at 0% 100%, rgba(34,211,184,0.08), transparent 60%),
+      linear-gradient(180deg, var(--ink-800), var(--ink-850));
+    padding:22px 24px;
+  }
+  .reco-top{display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;}
+  .reco-eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1.5px; color:var(--indigo);
+    display:flex; align-items:center; gap:8px;
+  }
+  .reco-eyebrow::before{content:''; width:16px; height:1px; background:var(--indigo);}
+
+  .weather-toggle{display:flex; gap:6px; background:var(--ink-900); border:1px solid var(--line); border-radius:999px; padding:3px;}
+  .wt-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:11.5px; padding:7px 14px; border-radius:999px;
+    border:none; background:transparent; color:var(--text-mut); cursor:pointer; transition:all .15s ease;
+  }
+  .wt-btn.active{background:var(--indigo); color:#fff;}
+
+  .reco-hero{
+    display:flex; align-items:center; gap:20px; flex-wrap:wrap;
+    padding:18px 20px; border-radius:12px; background:rgba(34,211,184,0.06);
+    border:1px solid rgba(34,211,184,0.3); margin-bottom:18px;
+  }
+  .reco-hero .reco-badge{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--ink-900); background:var(--teal);
+    padding:5px 11px; border-radius:999px; font-weight:600; white-space:nowrap;
+  }
+  .reco-hero .reco-zone{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; margin:8px 0 4px;}
+  .reco-hero .reco-meta{display:flex; gap:16px; flex-wrap:wrap; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-mut); margin-bottom:8px;}
+  .reco-hero .reco-meta b{color:var(--text-hi); font-weight:600;}
+  .reco-hero .reco-reason{font-size:13px; color:var(--text-mut); max-width:640px; line-height:1.6;}
+  .reco-hero .reco-reason b{color:var(--text-hi); font-weight:500;}
+  .reco-hero-icon{
+    width:52px; height:52px; border-radius:14px; background:var(--teal); flex:none;
+    display:flex; align-items:center; justify-content:center; font-size:24px;
+  }
+
+  .reco-cards{display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;}
+  @media (max-width:920px){ .reco-cards{grid-template-columns:1fr;} }
+  .reco-card{
+    background:var(--ink-900); border:1px solid var(--line-soft); border-radius:12px; padding:14px 15px;
+    transition:border-color .3s ease;
+  }
+  .reco-card.winner{border-color:rgba(34,211,184,0.5);}
+  .reco-card .rc-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .reco-card .rc-name{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:14.5px;}
+  .reco-card .rc-tag{font-family:'IBM Plex Mono',monospace; font-size:9.5px; padding:3px 8px; border-radius:999px;}
+  .rc-tag.ok{color:var(--teal); background:rgba(34,211,184,0.12); border:1px solid rgba(34,211,184,0.35);}
+  .rc-tag.risk{color:var(--coral); background:rgba(255,107,122,0.12); border:1px solid rgba(255,107,122,0.35);}
+  .rc-tag.warn{color:var(--amber); background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.35);}
+  .rc-row{display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-mut); padding:4px 0; border-top:1px dashed var(--line-soft);}
+  .rc-row:first-of-type{border-top:none;}
+  .rc-row b{color:var(--text-hi); font-weight:500; font-family:'IBM Plex Mono',monospace;}
+
+  /* ===== Main grid layout ===== */
+  .main-grid{
+    display:grid; grid-template-columns:1.55fr 0.85fr; gap:20px;
+    padding:0 32px; align-items:start;
+  }
+  @media (max-width:920px){ .main-grid{grid-template-columns:1fr;} }
+
+  .panel{
+    background:linear-gradient(180deg, var(--ink-800), var(--ink-850));
+    border:1px solid var(--line-soft); border-radius:var(--radius);
+    padding:20px;
+  }
+  .panel-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;}
+  .panel-title{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px;}
+  .panel-title .zone-name{color:var(--text-mut); font-weight:400; font-size:12.5px; display:block; margin-top:2px; font-family:'Inter';}
+  .sync-tag{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim);}
+
+  /* ===== Floor plan / stall grid (signature element) ===== */
+  .floorplan{
+    position:relative; border-radius:10px; overflow:hidden;
+    background:
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 34px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 34px),
+      var(--ink-900);
+    border:1px solid var(--line-soft);
+    padding:22px;
+    transition:border-color .4s ease, box-shadow .4s ease;
+  }
+  .floorplan.near-full{
+    border-color:rgba(251,191,36,0.5);
+    box-shadow:0 0 0 1px rgba(251,191,36,0.15) inset, 0 0 24px rgba(251,191,36,0.08);
+  }
+  .scanline{
+    position:absolute; top:0; bottom:0; width:2px;
+    background:linear-gradient(180deg, transparent, var(--amber), transparent);
+    box-shadow:0 0 16px 2px rgba(251,191,36,0.55);
+    animation:sweep 4.2s linear infinite;
+    opacity:0.75; z-index:2; pointer-events:none;
+  }
+  @keyframes sweep{
+    0%{left:0%;}
+    100%{left:100%;}
+  }
+  .stall-grid{
+    display:grid; gap:8px; position:relative; z-index:1;
+    grid-template-columns:repeat(var(--cols), 1fr);
+  }
+  .stall{
+    aspect-ratio:1/0.85; border-radius:6px; position:relative;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600;
+    cursor:pointer; user-select:none;
+    transition:transform .12s ease, box-shadow .3s ease, background .4s ease, border-color .4s ease;
+    border:1px solid transparent;
+  }
+  .stall:hover{transform:translateY(-2px);}
+  .stall.available{background:var(--teal-dim); color:var(--teal); border-color:rgba(34,211,184,0.35);}
+  .stall.occupied{background:var(--coral-dim); color:var(--coral); border-color:rgba(255,107,122,0.3);}
+  .stall.reserved{background:var(--violet-dim); color:var(--violet); border-color:rgba(192,132,252,0.5); box-shadow:0 0 0 1px rgba(192,132,252,0.12) inset;}
+  .stall.reserved::after{content:'🔒'; position:absolute; top:2px; right:3px; font-size:8px; opacity:0.85;}
+  .stall.just-changed{animation:flip .7s ease;}
+  @keyframes flip{
+    0%{transform:scale(0.8); box-shadow:0 0 0 0 rgba(251,191,36,0.7);}
+    40%{transform:scale(1.12); box-shadow:0 0 0 6px rgba(251,191,36,0.25);}
+    100%{transform:scale(1); box-shadow:0 0 0 0 rgba(251,191,36,0);}
+  }
+  .legend{display:flex; gap:18px; margin-top:16px; font-size:12px; color:var(--text-mut); flex-wrap:wrap;}
+  .legend span{display:inline-flex; align-items:center; gap:7px;}
+  .legend i{width:11px; height:11px; border-radius:3px; display:inline-block;}
+  .legend .lg-a{background:var(--teal);}
+  .legend .lg-o{background:var(--coral);}
+  .legend .lg-w{background:var(--amber);}
+  .legend .lg-s{background:var(--amber);}
+  .legend .lg-r{background:var(--violet);}
+
+  /* ===== tooltip ===== */
+  .tooltip{
+    position:fixed; z-index:100; background:var(--ink-700); border:1px solid var(--line);
+    border-radius:10px; padding:12px 14px; font-size:12px; color:var(--text-hi);
+    box-shadow:0 12px 30px rgba(0,0,0,0.45); pointer-events:none; opacity:0; transition:opacity .12s ease;
+    width:190px;
+  }
+  .tooltip.show{opacity:1;}
+  .tooltip .tt-id{font-family:'IBM Plex Mono',monospace; font-weight:600; margin-bottom:6px; font-size:13px;}
+  .tooltip .tt-row{display:flex; justify-content:space-between; color:var(--text-mut); margin-top:3px;}
+  .tooltip .tt-row b{color:var(--text-hi); font-weight:500;}
+
+  /* ===== Summary panel ===== */
+  .stat-row{display:flex; gap:12px; margin-bottom:16px;}
+  .stat-box{flex:1; background:var(--ink-900); border:1px solid var(--line-soft); border-radius:10px; padding:14px;}
+  .stat-box .num{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700;}
+  .stat-box.av .num{color:var(--teal);}
+  .stat-box.oc .num{color:var(--coral);}
+  .stat-box.rv .num{color:var(--violet);}
+  .stat-box .lbl{font-size:11px; color:var(--text-mut); margin-top:2px;}
+
+  .occ-bar-wrap{margin-bottom:18px;}
+  .occ-bar-top{display:flex; justify-content:space-between; font-size:11.5px; color:var(--text-mut); margin-bottom:6px;}
+  .occ-bar{height:8px; border-radius:999px; background:var(--ink-900); overflow:hidden; border:1px solid var(--line-soft);}
+  .occ-bar-fill{height:100%; background:linear-gradient(90deg, var(--teal), var(--amber), var(--coral)); border-radius:999px; transition:width .5s ease;}
+
+  .zone-list{display:flex; flex-direction:column; gap:10px;}
+  .zone-row{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border-radius:9px; background:var(--ink-900); border:1px solid var(--line-soft); font-size:12.5px;}
+  .zone-row .zn{display:flex; flex-direction:column; gap:2px;}
+  .zone-row .zn b{font-size:13px;}
+  .zone-row .zn small{color:var(--text-dim); font-size:10.5px;}
+  .zone-row.near-full{border-color:rgba(251,191,36,0.4); background:rgba(251,191,36,0.06);}
+  .zone-row .zc{font-family:'IBM Plex Mono',monospace; font-size:12px; display:flex; align-items:center;}
+  .zone-row .zc .a{color:var(--teal);}
+  .zone-row .zc .o{color:var(--coral); margin-left:8px;}
+  .status-badge{font-family:'IBM Plex Mono',monospace; font-size:9.5px; padding:3px 8px; border-radius:999px; margin-left:10px; white-space:nowrap;}
+  .status-badge.warn{color:var(--amber); background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.35);}
+
+  /* ===== Telemetry ===== */
+  .telemetry-section{padding:26px 32px 0;}
+  .telemetry-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .telemetry-head h2{font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600;}
+  .telemetry-head p{font-size:12px; color:var(--text-mut); margin-top:3px;}
+  .telemetry-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px;}
+  @media (max-width:920px){ .telemetry-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .telemetry-grid{grid-template-columns:1fr;} }
+  .tcard{background:var(--ink-800); border:1px solid var(--line-soft); border-radius:12px; padding:15px;}
+  .tcard .thead{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+  .tcard .ticon{width:26px; height:26px; border-radius:7px; background:var(--ink-900); display:flex; align-items:center; justify-content:center; border:1px solid var(--line);}
+  .tcard .tval{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600;}
+  .tcard .tlbl{font-size:11px; color:var(--text-mut); margin-top:2px;}
+  .badge-ok{font-size:9.5px; font-family:'IBM Plex Mono',monospace; color:var(--teal); background:rgba(34,211,184,0.1); border:1px solid rgba(34,211,184,0.3); padding:3px 7px; border-radius:999px;}
+
+  /* ===== Live camera viewer ===== */
+  .cam-grid{display:grid; grid-template-columns:1.55fr 0.85fr; gap:20px; align-items:start;}
+  @media (max-width:920px){ .cam-grid{grid-template-columns:1fr;} }
+
+  .rec-tag{display:flex; align-items:center; gap:7px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--coral);}
+  .dot-rec{width:7px; height:7px; border-radius:50%; background:var(--coral); animation:pulseDot 1s infinite;}
+
+  .cam-viewer{
+    position:relative; border-radius:10px; overflow:hidden; aspect-ratio:16/9;
+    background:#050810; border:1px solid var(--line-soft);
+  }
+  .cam-noise{
+    position:absolute; inset:0;
+    background:
+      repeating-linear-gradient(115deg, rgba(255,255,255,0.02) 0 2px, transparent 2px 6px),
+      radial-gradient(120% 90% at 25% 15%, rgba(108,124,255,0.10), transparent 60%),
+      radial-gradient(120% 90% at 85% 95%, rgba(34,211,184,0.07), transparent 55%);
+    animation:noiseShift 6s ease-in-out infinite alternate;
+  }
+  @keyframes noiseShift{0%{opacity:.72;} 100%{opacity:1;}}
+  .cam-boxes{position:absolute; inset:0;}
+  .cbox{position:absolute; border:2px solid var(--teal); border-radius:4px; transition:top .6s ease, left .6s ease, width .6s ease, height .6s ease, border-color .3s ease;}
+  .cbox.alert{border-color:var(--coral); box-shadow:0 0 14px rgba(255,107,122,0.5);}
+  .cbox .clabel{
+    position:absolute; top:-19px; left:-2px; font-family:'IBM Plex Mono',monospace; font-size:9.5px;
+    background:rgba(10,15,29,0.85); padding:2px 5px; border-radius:4px; color:var(--teal); white-space:nowrap;
+  }
+  .cbox.alert .clabel{color:var(--coral);}
+  .cam-hud-top, .cam-hud-bottom{
+    position:absolute; left:12px; right:12px; display:flex; justify-content:space-between;
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--text-mut);
+    text-shadow:0 1px 3px rgba(0,0,0,0.7); z-index:2;
+  }
+  .cam-hud-top{top:10px;}
+  .cam-hud-bottom{bottom:10px;}
+  #camAlertHud{color:var(--coral); font-weight:600;}
+
+  .cam-thumbs{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;}
+  .cam-thumb{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; padding:7px 12px; border-radius:8px;
+    border:1px solid var(--line); color:var(--text-mut); cursor:pointer; background:var(--ink-900);
+    transition:all .15s ease;
+  }
+  .cam-thumb:hover{border-color:var(--indigo); color:var(--text-hi);}
+  .cam-thumb.active{background:var(--indigo); border-color:var(--indigo); color:#fff;}
+
+  /* ===== Event log ===== */
+  .event-log{display:flex; flex-direction:column; gap:8px; max-height:440px; overflow-y:auto; padding-right:2px;}
+  .event-item{
+    display:flex; gap:10px; padding:10px 11px; border-radius:9px;
+    background:var(--ink-900); border:1px solid var(--line-soft); font-size:12px;
+    animation:eventIn .3s ease;
+  }
+  @keyframes eventIn{from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);}}
+  .event-item .edot{width:8px; height:8px; border-radius:50%; margin-top:4px; flex:none;}
+  .event-item.info .edot{background:var(--teal);}
+  .event-item.warn .edot{background:var(--amber);}
+  .event-item.alert .edot{background:var(--coral);}
+  .event-item .etext{flex:1; min-width:0;}
+  .event-item .etext b{display:block; font-size:12.5px; margin-bottom:2px; font-weight:500;}
+  .event-item .etext span{color:var(--text-dim); font-size:10.5px; font-family:'IBM Plex Mono',monospace;}
+
+  /* ===== Parking Reservation System ===== */
+  .reserve-section{padding:26px 32px 0;}
+  .reserve-grid{display:grid; grid-template-columns:1fr 1fr; gap:20px;}
+  @media (max-width:920px){ .reserve-grid{grid-template-columns:1fr;} }
+  .reserve-hint{font-size:12.5px; color:var(--text-mut); line-height:1.7; margin-bottom:16px;}
+  .reserve-hint b{color:var(--text-hi);}
+  .reserve-stats{display:flex; gap:12px; margin-bottom:16px;}
+  .reserve-stats .stat-box.rv2{flex:1; background:var(--ink-900); border:1px solid rgba(192,132,252,0.3); border-radius:10px; padding:14px;}
+  .reserve-stats .stat-box.rv2 .num{font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:700; color:var(--violet);}
+  .reserve-stats .stat-box.rv2 .lbl{font-size:11px; color:var(--text-mut); margin-top:2px;}
+  .quick-reserve{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px;}
+  .qr-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; padding:9px 15px; border-radius:9px;
+    border:1px solid rgba(192,132,252,0.4); color:var(--violet); background:rgba(192,132,252,0.08);
+    cursor:pointer; transition:all .15s ease;
+  }
+  .qr-btn:hover{background:rgba(192,132,252,0.18); border-color:var(--violet);}
+  .qr-btn:disabled{opacity:0.4; cursor:not-allowed;}
+  .reservation-list{display:flex; flex-direction:column; gap:9px; max-height:300px; overflow-y:auto; padding-right:2px;}
+  .res-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:11px 13px; border-radius:10px; background:var(--ink-900);
+    border:1px solid rgba(192,132,252,0.35); animation:eventIn .3s ease;
+  }
+  .res-item .ri-info{display:flex; flex-direction:column; gap:3px; min-width:0;}
+  .res-item .ri-info b{font-family:'Space Grotesk',sans-serif; font-size:13.5px;}
+  .res-item .ri-info small{color:var(--text-dim); font-size:10.5px; font-family:'IBM Plex Mono',monospace;}
+  .res-item .ri-right{display:flex; align-items:center; gap:10px; flex:none;}
+  .res-item .ri-timer{font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--violet); font-weight:600; white-space:nowrap;}
+  .res-item .ri-timer.soon{color:var(--coral);}
+  .res-cancel-btn{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; padding:6px 11px; border-radius:8px;
+    border:1px solid rgba(255,107,122,0.4); color:var(--coral); background:rgba(255,107,122,0.08);
+    cursor:pointer; transition:all .15s ease; white-space:nowrap;
+  }
+  .res-cancel-btn:hover{background:rgba(255,107,122,0.2);}
+  .res-empty{font-size:12.5px; color:var(--text-dim); text-align:center; padding:26px 10px;}
+
+  /* ===== AI Prediction System ===== */
+  .predict-section{padding:30px 32px 0;}
+  .predict-header{margin-bottom:18px;}
+  .predict-header h2{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:600; display:flex; align-items:center; gap:9px; margin-top:8px;}
+  .predict-header p{font-size:12.5px; color:var(--text-mut); margin-top:6px; max-width:640px;}
+
+  .predict-summary-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px;}
+  @media (max-width:920px){ .predict-summary-grid{grid-template-columns:repeat(2,1fr);} }
+  .psum-card{
+    background:linear-gradient(180deg, var(--ink-800), var(--ink-850)); border:1px solid var(--line-soft);
+    border-radius:12px; padding:16px 17px; position:relative; overflow:hidden;
+  }
+  .psum-card .psum-lbl{font-size:11.5px; color:var(--text-mut); display:flex; align-items:center; gap:6px;}
+  .psum-card .psum-val{font-family:'Space Grotesk',sans-serif; font-size:27px; font-weight:700; margin-top:8px;}
+  .psum-card.now .psum-val{color:var(--teal);}
+  .psum-card.m15 .psum-val{color:var(--amber);}
+  .psum-card.m30 .psum-val{color:var(--coral);}
+  .psum-card.conf .psum-val{color:var(--indigo);}
+  .psum-card .psum-unit{font-size:12px; color:var(--text-dim); font-weight:500; margin-left:4px;}
+
+  .predict-grid-2{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:20px;}
+  .predict-grid-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:20px;}
+  .predict-grid-4{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-top:20px;}
+  @media (max-width:920px){ .predict-grid-2, .predict-grid-3, .predict-grid-4{grid-template-columns:1fr;} }
+
+  /* forecast bars (occupancy forecast) */
+  .forecast-zone{margin-bottom:18px;}
+  .forecast-zone:last-child{margin-bottom:0;}
+  .forecast-zone .fz-name{font-family:'Space Grotesk',sans-serif; font-size:13.5px; font-weight:600; margin-bottom:8px;}
+  .forecast-row{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+  .forecast-row .fr-lbl{width:88px; flex:none; font-size:11px; color:var(--text-mut); font-family:'IBM Plex Mono',monospace;}
+  .forecast-row .fr-track{flex:1; height:9px; border-radius:999px; background:var(--ink-900); border:1px solid var(--line-soft); overflow:hidden;}
+  .forecast-row .fr-fill{height:100%; border-radius:999px; background:linear-gradient(90deg, var(--teal), var(--amber)); transition:width .6s ease;}
+  .forecast-row .fr-val{width:64px; flex:none; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--text-hi);}
+
+  /* explainable AI */
+  .explain-tags{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:16px;}
+  .explain-tag{font-family:'IBM Plex Mono',monospace; font-size:11px; padding:6px 11px; border-radius:999px; border:1px solid var(--line); color:var(--text-mut); background:rgba(255,255,255,0.02);}
+  .explain-tag b{color:var(--teal);}
+  .weight-row{display:flex; align-items:center; gap:10px; margin-bottom:9px;}
+  .weight-row .wr-lbl{width:90px; flex:none; font-size:12px; color:var(--text-hi);}
+  .weight-row .wr-track{flex:1; height:9px; border-radius:999px; background:var(--ink-900); border:1px solid var(--line-soft); overflow:hidden;}
+  .weight-row .wr-fill{height:100%; border-radius:999px; background:linear-gradient(90deg, var(--indigo), var(--teal)); transition:width .6s ease;}
+  .weight-row .wr-val{width:42px; flex:none; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--text-mut);}
+
+  /* prediction table */
+  .predict-table{width:100%; border-collapse:collapse; font-size:12.5px;}
+  .predict-table th{text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.5px; color:var(--text-dim); font-weight:500; padding:8px 10px; border-bottom:1px solid var(--line-soft); text-transform:uppercase;}
+  .predict-table td{padding:11px 10px; border-bottom:1px solid var(--line-soft); font-family:'IBM Plex Mono',monospace;}
+  .predict-table tr:last-child td{border-bottom:none;}
+  .predict-table td.zn-cell{font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:13.5px;}
+  .predict-table td.zn-cell small{display:block; font-family:'Inter'; font-weight:400; color:var(--text-dim); font-size:10.5px; margin-top:2px;}
+  .risk-pill{display:inline-flex; align-items:center; gap:5px; font-size:11px;}
+
+  /* peak time */
+  .peak-row{display:flex; align-items:center; gap:10px; margin-bottom:8px;}
+  .peak-row .pr-lbl{width:56px; flex:none; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-mut);}
+  .peak-row .pr-track{flex:1; height:14px; border-radius:6px; background:var(--ink-900); border:1px solid var(--line-soft); overflow:hidden;}
+  .peak-row .pr-fill{height:100%; border-radius:6px; background:linear-gradient(90deg, var(--teal), var(--amber), var(--coral)); transition:width .6s ease;}
+  .peak-row.now .pr-lbl{color:var(--amber); font-weight:600;}
+  .peak-row .pr-pct{width:38px; flex:none; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim);}
+
+  /* heatmap */
+  .heatmap-wrap{display:flex; flex-direction:column; gap:12px;}
+  .heat-row{display:flex; align-items:center; gap:12px;}
+  .heat-row .hz-lbl{width:96px; flex:none; font-size:12px; color:var(--text-hi);}
+  .heat-cells{display:flex; gap:4px; flex:1;}
+  .heat-cell{flex:1; height:22px; border-radius:5px; opacity:0.9;}
+
+  /* event / weather / notification cards */
+  .mini-panel{background:linear-gradient(180deg, var(--ink-800), var(--ink-850)); border:1px solid var(--line-soft); border-radius:12px; padding:16px 17px;}
+  .mini-panel .mp-eyebrow{font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:1px; color:var(--text-dim); text-transform:uppercase; margin-bottom:10px;}
+  .mini-panel .mp-icon{font-size:22px; margin-bottom:8px;}
+  .mini-panel .mp-title{font-family:'Space Grotesk',sans-serif; font-size:15px; font-weight:600; margin-bottom:6px;}
+  .mini-panel .mp-desc{font-size:12px; color:var(--text-mut); line-height:1.6;}
+  .mini-panel .mp-highlight{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:20px;}
+  .mini-panel.event .mp-highlight{color:var(--coral);}
+  .mini-panel.weather .mp-highlight{color:var(--indigo);}
+  .mini-panel.notif{border-color:rgba(255,107,122,0.4); background:radial-gradient(500px 200px at 100% 0%, rgba(255,107,122,0.12), transparent 60%), linear-gradient(180deg, var(--ink-800), var(--ink-850));}
+  .mini-panel.notif .mp-highlight{color:var(--coral);}
+  .notif-countdown{font-family:'IBM Plex Mono',monospace; font-size:32px; font-weight:600; color:var(--coral); display:flex; align-items:baseline; gap:6px;}
+  .notif-countdown span{font-size:13px; color:var(--text-mut); font-weight:400; font-family:'Inter';}
+
+  /* carbon / confidence / insight / model cards */
+  .stat-mini{background:var(--ink-900); border:1px solid var(--line-soft); border-radius:10px; padding:13px 14px; text-align:center;}
+  .stat-mini .sm-val{font-family:'Space Grotesk',sans-serif; font-size:19px; font-weight:700; color:var(--teal);}
+  .stat-mini .sm-lbl{font-size:10.5px; color:var(--text-mut); margin-top:3px;}
+  .carbon-grid{display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;}
+  .stars{color:var(--amber); font-size:14px; letter-spacing:1px;}
+  .model-rows{display:flex; flex-direction:column; gap:8px; margin-top:4px;}
+  .model-rows .mrow{display:flex; justify-content:space-between; font-size:12px; color:var(--text-mut); padding:6px 0; border-top:1px dashed var(--line-soft);}
+  .model-rows .mrow:first-child{border-top:none;}
+  .model-rows .mrow b{color:var(--text-hi); font-family:'IBM Plex Mono',monospace; font-weight:500;}
+  .insight-body{font-size:13px; color:var(--text-hi); line-height:1.7;}
+  .insight-body b{color:var(--teal);}
+
+  /* ===== footer ===== */
+  .footer{margin-top:34px; padding:20px 32px 0; border-top:1px solid var(--line-soft); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;}
+  .footer-inner{width:100%; padding-top:18px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; font-size:11.5px; color:var(--text-dim);}
+  .footer-inner b{color:var(--text-mut);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M4 17V7a1 1 0 0 1 1-1h9a4 4 0 0 1 0 8H8v3" stroke="#0A0F1D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <div class="brand-text">
+      <div class="name">SmartPark</div>
+      <div class="sub">มหาวิทยาลัย · ระบบแจ้งที่ว่างลานจอดรถอัจฉริยะ</div>
+    </div>
+  </div>
+  <div class="top-right">
+    <div class="edge-status"><span class="dot-live"></span> Edge AI Node · Online</div>
+    <div class="clock">
+      <div class="time" id="clockTime">--:--:--</div>
+      <div class="date" id="clockDate">-</div>
+    </div>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-top">
+    <div>
+      <h1>รู้ก่อนขับเข้า ว่าโซนไหน<span> ว่าง</span></h1>
+      <p>ข้อมูลช่องจอดแบบเรียลไทม์จากกล้องและเซนเซอร์อัลตราโซนิก ประมวลผลด้วย Edge AI บนบอร์ด PSoC™ Edge E84 — ลดเวลาขับวนหาที่จอด</p>
+    </div>
+    <div class="zone-tabs" id="zoneTabs"></div>
+  </div>
+</div>
+
+<div class="reco-section">
+  <div class="panel reco-panel">
+    <div class="reco-top">
+      <div class="reco-eyebrow">AI PARKING RECOMMENDATION</div>
+      <div class="weather-toggle" id="weatherToggle">
+        <button class="wt-btn active" data-w="clear">☀️ แจ่มใส</button>
+        <button class="wt-btn" data-w="rain">🌧️ ฝนตก</button>
+      </div>
+    </div>
+
+    <div class="reco-hero" id="recoHero">
+      <!-- filled by JS -->
+    </div>
+
+    <div class="reco-cards" id="recoCards"></div>
+  </div>
+</div>
+
+<div class="main-grid">
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">ผังลานจอด — มุมมองสด
+        <span class="zone-name" id="zoneCaption">โซน A · อาคารเรียนรวม</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span class="status-badge warn" id="floorplanWarn" style="display:none;"><span class="dot-warn" style="display:inline-block; margin-right:5px;"></span>โซนนี้ใกล้เต็มแล้ว</span>
+        <div class="sync-tag">อัปเดตล่าสุด <span id="syncTime">--:--:--</span></div>
+      </div>
+    </div>
+
+    <div class="floorplan" id="floorplan">
+      <div class="scanline"></div>
+      <div class="stall-grid" id="stallGrid" style="--cols:8;"></div>
+    </div>
+
+    <div class="legend">
+      <span><i class="lg-a"></i> ว่าง (คลิกเพื่อจอง)</span>
+      <span><i class="lg-o"></i> ไม่ว่าง</span>
+      <span><i class="lg-r"></i> จองแล้ว</span>
+      <span><i class="lg-w"></i> โซนใกล้เต็ม (ใช้พื้นที่ ≥ 85%)</span>
+      <span><i class="lg-s"></i> เส้นสแกนตรวจจับของ Edge AI</span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title">สรุปภาพรวม</div>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-box av">
+        <div class="num" id="sumAvail">--</div>
+        <div class="lbl">ช่องว่าง</div>
+      </div>
+      <div class="stat-box oc">
+        <div class="num" id="sumOcc">--</div>
+        <div class="lbl">ไม่ว่าง</div>
+      </div>
+      <div class="stat-box rv">
+        <div class="num" id="sumReserved">--</div>
+        <div class="lbl">จองแล้ว</div>
+      </div>
+    </div>
+
+    <div class="occ-bar-wrap">
+      <div class="occ-bar-top"><span>อัตราการใช้พื้นที่</span><b id="occPct">--%</b></div>
+      <div class="occ-bar"><div class="occ-bar-fill" id="occFill" style="width:0%"></div></div>
+    </div>
+
+    <div class="panel-title" style="font-size:13px; margin-bottom:10px;">ทุกโซนในมหาวิทยาลัย</div>
+    <div class="zone-list" id="zoneList"></div>
+  </div>
+</div>
+
+<div class="reserve-section" id="reserveSection">
+  <div class="reserve-grid">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">🎫 จองที่จอดรถล่วงหน้า
+          <span class="zone-name">คลิกช่องว่าง (สีเขียว) บนผังลานจอดด้านบนเพื่อจองทันที</span>
+        </div>
+      </div>
+      <div class="reserve-hint">ระบบจะ<b>กันที่จอดไว้ให้ 15 นาที</b> เมื่อครบกำหนดและยังไม่มีรถเข้าจอดจริง ช่องจะถูกปล่อยกลับเป็น<b>ว่าง</b>โดยอัตโนมัติ</div>
+      <div class="reserve-stats">
+        <div class="stat-box rv2">
+          <div class="num" id="reserveTotalNum">0</div>
+          <div class="lbl">การจองที่ใช้งานอยู่</div>
+        </div>
+        <div class="stat-box rv2">
+          <div class="num" id="reserveSoonNum">--</div>
+          <div class="lbl">หมดอายุเร็วสุดใน (นาที)</div>
+        </div>
+      </div>
+      <div class="panel-title" style="font-size:13px; margin-bottom:10px;">จองด่วนจากคำแนะนำ AI</div>
+      <div class="quick-reserve" id="quickReserve"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">การจองของฉัน</div>
+        <div class="sync-tag">ถือครองสูงสุด 15 นาที/รายการ</div>
+      </div>
+      <div class="reservation-list" id="reservationList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="predict-section" id="predictSection">
+  <div class="predict-header">
+    <div class="reco-eyebrow">🔮 AI PREDICTION SYSTEM</div>
+    <h2>ระบบคาดการณ์ที่จอดรถล่วงหน้า</h2>
+    <p>คาดการณ์จำนวนที่จอดว่างล่วงหน้าด้วยโมเดล AI ที่เรียนรู้จากข้อมูลย้อนหลัง ผสานสภาพอากาศ ปฏิทินกิจกรรม และการไหลของทราฟฟิกแบบเรียลไทม์</p>
+  </div>
+
+  <!-- 1. Prediction Summary -->
+  <div class="predict-summary-grid" id="predictSummary"></div>
+
+  <!-- 2 & 4. Occupancy Forecast + Explainable AI -->
+  <div class="predict-grid-2">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Parking Occupancy Forecast
+          <span class="zone-name">คาดการณ์ที่ว่างล่วงหน้าราย 15 / 30 / 60 นาที</span>
+        </div>
+      </div>
+      <div id="forecastBars"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Explainable AI
+          <span class="zone-name">AI คิดจากอะไรบ้าง — เพื่อความโปร่งใสของโมเดล</span>
+        </div>
+      </div>
+      <div class="explain-tags">
+        <span class="explain-tag">✔ จำนวนช่องว่าง</span>
+        <span class="explain-tag">✔ เวลา</span>
+        <span class="explain-tag">✔ วันในสัปดาห์</span>
+        <span class="explain-tag">✔ ข้อมูลย้อนหลัง</span>
+        <span class="explain-tag">✔ สภาพอากาศ</span>
+        <span class="explain-tag">✔ Event</span>
+        <span class="explain-tag">✔ ระยะทาง</span>
+        <span class="explain-tag">✔ Traffic</span>
+        <span class="explain-tag">✔ Vehicle Flow</span>
+      </div>
+      <div id="weightBars"></div>
+    </div>
+  </div>
+
+  <!-- 5. Prediction Table -->
+  <div class="panel" style="margin-top:20px;">
+    <div class="panel-head">
+      <div class="panel-title">Prediction Table
+        <span class="zone-name">ที่ว่างคาดการณ์รายโซนและระดับความเสี่ยงเต็ม</span>
+      </div>
+      <div class="sync-tag" id="predictTableSync">อัปเดตล่าสุด --:--:--</div>
+    </div>
+    <table class="predict-table">
+      <thead>
+        <tr><th>ลาน</th><th>ตอนนี้</th><th>15 นาที</th><th>30 นาที</th><th>60 นาที</th><th>Risk</th></tr>
+      </thead>
+      <tbody id="predictTableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 6 & 11. Peak Time + Heatmap -->
+  <div class="predict-grid-2">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Peak Time Prediction
+          <span class="zone-name">ความหนาแน่นที่คาดการณ์ตลอดวันนี้</span>
+        </div>
+      </div>
+      <div id="peakChart"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Occupancy Heatmap
+          <span class="zone-name">ระดับความหนาแน่นคาดการณ์ 60 นาทีข้างหน้า</span>
+        </div>
+      </div>
+      <div class="heatmap-wrap" id="heatmapWrap"></div>
+    </div>
+  </div>
+
+  <!-- 7, 8, 9. Event / Weather / Notification -->
+  <div class="predict-grid-3">
+    <div class="mini-panel event" id="eventCard"></div>
+    <div class="mini-panel weather" id="weatherPredictCard"></div>
+    <div class="mini-panel notif" id="notifCard"></div>
+  </div>
+
+  <!-- 10, 12, 13, 15. Carbon / Confidence / Insight / Learning Model -->
+  <div class="predict-grid-4">
+    <div class="mini-panel" id="carbonCard"></div>
+    <div class="mini-panel" id="confidenceCard"></div>
+    <div class="mini-panel" id="modelCard"></div>
+    <div class="mini-panel" style="grid-column:span 1;" id="suggestCard"></div>
+  </div>
+
+  <!-- 13. AI Insight -->
+  <div class="panel" style="margin-top:16px;">
+    <div class="panel-head">
+      <div class="panel-title">🧠 AI Insight</div>
+    </div>
+    <div class="insight-body" id="aiInsightBody"></div>
+  </div>
+</div>
+
+<div class="telemetry-section" style="padding-top:26px;">
+  <div class="telemetry-head">
+    <div>
+      <h2>กล้องวงจรปิด — เฝ้าระวังและตรวจจับเรียลไทม์</h2>
+      <p>ใช้กล้องตัวเดียวกับที่ตรวจจับช่องจอด ทำหน้าที่เป็นระบบเฝ้าระวังความปลอดภัยไปพร้อมกัน</p>
+    </div>
+  </div>
+
+  <div class="cam-grid">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">มุมมองกล้องสด
+          <span class="zone-name" id="camCaption">C-01 · โซน A</span>
+        </div>
+        <div class="rec-tag"><span class="dot-rec"></span> REC <span class="mono" id="camClock">--:--:--</span></div>
+      </div>
+
+      <div class="cam-viewer" id="camViewer">
+        <div class="cam-noise"></div>
+        <div class="cam-boxes" id="camBoxes"></div>
+        <div class="cam-hud-top">
+          <span id="camIdHud">C-01</span>
+          <span>1920×1080 · 12 FPS · on-device Edge AI</span>
+        </div>
+        <div class="cam-hud-bottom">
+          <span id="camDetectHud">ตรวจพบ 0 คัน</span>
+          <span id="camAlertHud"></span>
+        </div>
+      </div>
+
+      <div class="cam-thumbs" id="camThumbs"></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">บันทึกเหตุการณ์</div>
+        <div class="sync-tag">ทุกโซน · สด</div>
+      </div>
+      <div class="event-log" id="eventLog"></div>
+    </div>
+  </div>
+</div>
+
+<div class="telemetry-section" style="padding-top:26px;">
+  <div class="telemetry-head">
+    <div>
+      <h2>Digital Twin Sensor Studio — สถานะอุปกรณ์ภาคสนาม</h2>
+      <p>สตรีมข้อมูลจากเซนเซอร์บนบอร์ดเพื่อดูแลตัวอุปกรณ์ควบคู่กับการตรวจจับช่องจอด</p>
+    </div>
+  </div>
+  <div class="telemetry-grid">
+    <div class="tcard">
+      <div class="thead"><div class="ticon">📷</div><span class="badge-ok">ปกติ</span></div>
+      <div class="tval" id="camOnline">14 / 14</div>
+      <div class="tlbl">กล้องออนไลน์</div>
+    </div>
+    <div class="tcard">
+      <div class="thead"><div class="ticon">📳</div><span class="badge-ok" id="tamperBadge">ปกติ</span></div>
+      <div class="tval" id="tamperVal">0 เหตุการณ์</div>
+      <div class="tlbl">Accelerometer/Gyro · แจ้งเตือนการถูกกระแทก</div>
+    </div>
+    <div class="tcard">
+      <div class="thead"><div class="ticon">🧭</div><span class="badge-ok">ยืนยันตรงกัน</span></div>
+      <div class="tval" id="magVal">98.4%</div>
+      <div class="tlbl">Magnetometer · ความสอดคล้องกับกล้อง</div>
+    </div>
+    <div class="tcard">
+      <div class="thead"><div class="ticon">🌡️</div><span class="badge-ok">ปลอดภัย</span></div>
+      <div class="tval" id="envVal">33°C · 68%</div>
+      <div class="tlbl">อุณหภูมิ/ความชื้น กล่องอุปกรณ์กลางแจ้ง</div>
+    </div>
+  </div>
+</div>
+
+<div class="telemetry-section">
+  <div class="footer">
+    <div class="footer-inner">
+      <div><b>SmartPark</b> — TESAIoT Secure Edge AI Hackathon 2026 · Service Robotics</div>
+      <div>ทีม FriendsPower · ข้อมูลเข้ารหัสด้วย OPTIGA™ Trust M ก่อนส่งขึ้น Cloud</div>
+    </div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+// ---------- Zone / stall data ----------
+const zones = [
+  { id:'A', name:'โซน A · อาคารเรียนรวม', cols:8, count:24, cams:['C-01','C-02','C-03','C-04'], distanceM:110, walkMin:2, covered:false },
+  { id:'B', name:'โซน B · คณะวิศวกรรมศาสตร์', cols:6, count:18, cams:['C-05','C-06','C-07'], distanceM:260, walkMin:5, covered:true },
+  { id:'C', name:'โซน C · หอสมุดกลาง', cols:6, count:30, cams:['C-08','C-09','C-10','C-11','C-12','C-13','C-14'], distanceM:180, walkMin:3, covered:false },
+];
+
+let state = {}; // zoneId -> array of {id, status, confidence, cam}
+zones.forEach(z=>{
+  const arr = [];
+  for(let i=1;i<=z.count;i++){
+    const occupied = Math.random() < 0.62; // peak-hour bias
+    arr.push({
+      id: z.id + '-' + String(i).padStart(2,'0'),
+      status: occupied ? 'occupied' : 'available',
+      confidence: (92 + Math.random()*7.5).toFixed(1),
+      cam: z.cams[i % z.cams.length]
+    });
+  }
+  state[z.id] = arr;
+});
+
+let activeZone = 'A';
+let eventsArr = [];
+let weather = 'clear'; // 'clear' | 'rain'
+let queueCars = {}; // zoneId -> number of cars currently entering/queuing
+zones.forEach(z=>{ queueCars[z.id] = Math.floor(Math.random()*6); });
+const NEAR_FULL_THRESHOLD = 0.85; // โซนที่ใช้พื้นที่ >= 85% ถือว่า "ใกล้เต็ม"
+
+// ---------- Parking reservation system ----------
+let reservations = {}; // stallId -> { zid, expiresAt }
+const RESERVE_HOLD_MS = 15 * 60 * 1000; // hold a reserved spot for 15 minutes
+function isNearFull(zid){
+  const z = zones.find(z=>z.id===zid);
+  const occ = z.count - countAvail(zid);
+  return (occ / z.count) >= NEAR_FULL_THRESHOLD;
+}
+
+// ---------- Render tabs ----------
+const tabsEl = document.getElementById('zoneTabs');
+function renderTabs(){
+  tabsEl.innerHTML = '';
+  zones.forEach(z=>{
+    const b = document.createElement('div');
+    const nearFull = isNearFull(z.id);
+    b.className = 'zone-tab' + (z.id===activeZone ? ' active' : '') + (nearFull ? ' near-full' : '');
+    b.innerHTML = (nearFull ? '<span class="dot-warn"></span>' : '') +
+      'โซน ' + z.id + ' · ว่าง ' + countAvail(z.id) + '/' + z.count + (nearFull ? ' · ใกล้เต็ม' : '');
+    b.onclick = ()=>{ activeZone = z.id; renderAll(); };
+    tabsEl.appendChild(b);
+  });
+}
+
+function countAvail(zid){ return state[zid].filter(s=>s.status==='available').length; }
+function countByStatus(zid, status){ return state[zid].filter(s=>s.status===status).length; }
+
+// ---------- Render floor plan ----------
+const gridEl = document.getElementById('stallGrid');
+const tooltip = document.getElementById('tooltip');
+
+function renderGrid(changedIds=[]){
+  const z = zones.find(z=>z.id===activeZone);
+  gridEl.style.setProperty('--cols', z.cols);
+  gridEl.innerHTML = '';
+  state[activeZone].forEach(s=>{
+    const d = document.createElement('div');
+    d.className = 'stall ' + s.status + (changedIds.includes(s.id) ? ' just-changed' : '');
+    d.textContent = s.id;
+    d.addEventListener('mousemove', (e)=> showTooltip(e, s));
+    d.addEventListener('mouseleave', hideTooltip);
+    d.addEventListener('click', ()=> handleStallClick(z.id, s));
+    gridEl.appendChild(d);
+  });
+  document.getElementById('zoneCaption').textContent = z.name;
+
+  const nearFull = isNearFull(activeZone);
+  document.getElementById('floorplan').classList.toggle('near-full', nearFull);
+  document.getElementById('floorplanWarn').style.display = nearFull ? 'inline-flex' : 'none';
+}
+
+function showTooltip(e, s){
+  const statusLabel = s.status==='available' ? 'ว่าง · คลิกเพื่อจอง' : s.status==='reserved' ? 'จองแล้ว · คลิกเพื่อยกเลิก' : 'ไม่ว่าง';
+  const resRow = (s.status==='reserved' && reservations[s.id])
+    ? `<div class="tt-row"><span>เหลือเวลา</span><b>${formatMMSS(reservations[s.id].expiresAt - Date.now())} นาที</b></div>`
+    : '';
+  tooltip.innerHTML = `
+    <div class="tt-id">${s.id} — ${statusLabel}</div>
+    <div class="tt-row"><span>ความเชื่อมั่น AI</span><b>${s.confidence}%</b></div>
+    <div class="tt-row"><span>ตรวจจับโดย</span><b>${s.cam}</b></div>
+    <div class="tt-row"><span>อัปเดตล่าสุด</span><b>${lastSync}</b></div>
+    ${resRow}
+  `;
+  tooltip.style.left = (e.clientX + 16) + 'px';
+  tooltip.style.top = (e.clientY + 12) + 'px';
+  tooltip.classList.add('show');
+}
+function hideTooltip(){ tooltip.classList.remove('show'); }
+
+// ---------- Render summary ----------
+function renderSummary(){
+  let totalAvail=0, totalOcc=0, totalReserved=0;
+  const zlist = document.getElementById('zoneList');
+  zlist.innerHTML = '';
+  zones.forEach(z=>{
+    const av = countAvail(z.id);
+    const rv = countByStatus(z.id, 'reserved');
+    const oc = z.count - av - rv;
+    totalAvail += av; totalOcc += oc; totalReserved += rv;
+    const nearFull = isNearFull(z.id);
+    const row = document.createElement('div');
+    row.className = 'zone-row' + (nearFull ? ' near-full' : '');
+    row.innerHTML = `
+      <div class="zn"><b>โซน ${z.id}</b><small>${z.name.split('· ')[1]}</small></div>
+      <div class="zc"><span class="a">${av} ว่าง</span><span class="o">${oc} ไม่ว่าง</span>${rv > 0 ? `<span class="o" style="color:var(--violet);">${rv} จอง</span>` : ''}${nearFull ? '<span class="status-badge warn">ใกล้เต็ม</span>' : ''}</div>
+    `;
+    zlist.appendChild(row);
+  });
+  document.getElementById('sumAvail').textContent = totalAvail;
+  document.getElementById('sumOcc').textContent = totalOcc;
+  document.getElementById('sumReserved').textContent = totalReserved;
+  const pct = Math.round(((totalOcc+totalReserved)/(totalAvail+totalOcc+totalReserved))*100);
+  document.getElementById('occPct').textContent = pct + '%';
+  document.getElementById('occFill').style.width = pct + '%';
+}
+
+let currentCam = zones[0].cams[0];
+function syncCamToZone(){
+  const z = zones.find(z=>z.id===activeZone);
+  if(!z.cams.includes(currentCam)) currentCam = z.cams[0];
+}
+
+let lastSync = '--:--:--';
+function renderAll(changedIds=[]){
+  renderTabs();
+  renderGrid(changedIds);
+  renderSummary();
+  syncCamToZone();
+  renderCameraPanel();
+  renderRecommendation();
+  renderReservationList();
+  renderQuickReserve();
+}
+renderAll();
+
+// ---------- Reservation actions ----------
+function formatMMSS(ms){
+  const totalSec = Math.max(0, Math.floor(ms/1000));
+  const m = Math.floor(totalSec/60);
+  const sec = totalSec % 60;
+  return m + ':' + String(sec).padStart(2,'0');
+}
+
+function handleStallClick(zid, s){
+  if(s.status === 'available'){
+    reserveStall(zid, s.id);
+  } else if(s.status === 'reserved' && reservations[s.id]){
+    cancelReservation(s.id);
+  }
+}
+
+function reserveStall(zid, stallId){
+  const s = state[zid].find(x=>x.id===stallId);
+  if(!s || s.status !== 'available') return;
+  s.status = 'reserved';
+  reservations[stallId] = { zid, expiresAt: Date.now() + RESERVE_HOLD_MS };
+  hideTooltip();
+  pushEvent('info', `จองช่อง ${stallId} สำเร็จ — ถือครองไว้ 15 นาที`, zid);
+  renderAll([stallId]);
+}
+
+function cancelReservation(stallId){
+  const r = reservations[stallId];
+  if(!r) return;
+  const s = state[r.zid].find(x=>x.id===stallId);
+  if(s && s.status === 'reserved') s.status = 'available';
+  delete reservations[stallId];
+  hideTooltip();
+  pushEvent('info', `ยกเลิกการจองช่อง ${stallId}`, r.zid);
+  renderAll([stallId]);
+}
+
+function quickReserveZone(zid){
+  const s = state[zid].find(x=>x.status==='available');
+  if(!s) return;
+  reserveStall(zid, s.id);
+}
+
+function renderQuickReserve(){
+  document.getElementById('quickReserve').innerHTML = zones.map(z=>{
+    const av = countAvail(z.id);
+    return `<button class="qr-btn" ${av===0?'disabled':''} onclick="quickReserveZone('${z.id}')">จองในโซน ${z.id} (ว่าง ${av})</button>`;
+  }).join('');
+}
+
+function renderReservationList(){
+  const ids = Object.keys(reservations);
+  const listEl = document.getElementById('reservationList');
+  if(ids.length === 0){
+    listEl.innerHTML = '<div class="res-empty">คุณยังไม่มีการจอง — คลิกช่องว่างสีเขียวบนผังลานจอด หรือใช้ปุ่มจองด่วนด้านซ้ายเพื่อเริ่มจอง</div>';
+  } else {
+    listEl.innerHTML = ids.map(id=>{
+      const r = reservations[id];
+      const remainMs = r.expiresAt - Date.now();
+      const soon = remainMs < 3*60*1000;
+      return `
+        <div class="res-item">
+          <div class="ri-info"><b>ช่อง ${id}</b><small>โซน ${r.zid}</small></div>
+          <div class="ri-right">
+            <div class="ri-timer${soon ? ' soon' : ''}">${formatMMSS(remainMs)} น.</div>
+            <button class="res-cancel-btn" onclick="cancelReservation('${id}')">ยกเลิก</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+  document.getElementById('reserveTotalNum').textContent = ids.length;
+  if(ids.length){
+    const soonestMin = Math.max(0, Math.min(...ids.map(id=> (reservations[id].expiresAt - Date.now())/60000)));
+    document.getElementById('reserveSoonNum').textContent = soonestMin.toFixed(1);
+  } else {
+    document.getElementById('reserveSoonNum').textContent = '--';
+  }
+}
+
+// tick reservation countdowns every second; only trigger a full re-render when a hold actually expires
+function tickReservations(){
+  let expired = false;
+  Object.keys(reservations).forEach(id=>{
+    if(Date.now() >= reservations[id].expiresAt){
+      const r = reservations[id];
+      const s = state[r.zid].find(x=>x.id===id);
+      if(s && s.status === 'reserved') s.status = 'available';
+      delete reservations[id];
+      pushEvent('warn', `การจองช่อง ${id} หมดอายุ — ปล่อยเป็นว่างอัตโนมัติ`, r.zid);
+      expired = true;
+    }
+  });
+  if(expired){
+    renderAll();
+  } else {
+    renderReservationList();
+  }
+}
+setInterval(tickReservations, 1000);
+
+// ---------- Clock ----------
+function tickClock(){
+  const now = new Date();
+  document.getElementById('clockTime').textContent = now.toLocaleTimeString('th-TH', {hour12:false});
+  document.getElementById('clockDate').textContent = now.toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'numeric'});
+  const camClockEl = document.getElementById('camClock');
+  if(camClockEl) camClockEl.textContent = now.toLocaleTimeString('th-TH', {hour12:false});
+}
+tickClock();
+setInterval(tickClock, 1000);
+
+// ---------- Real-time simulation ----------
+function simulateUpdate(){
+  // pick a random zone (weighted toward active zone so it's visible)
+  const targetZoneId = Math.random() < 0.6 ? activeZone : zones[Math.floor(Math.random()*zones.length)].id;
+  const arr = state[targetZoneId];
+  const flips = 1 + Math.floor(Math.random()*2);
+  const changed = [];
+  for(let i=0;i<flips;i++){
+    const idx = Math.floor(Math.random()*arr.length);
+    arr[idx].status = arr[idx].status === 'available' ? 'occupied' : 'available';
+    arr[idx].confidence = (91 + Math.random()*8.5).toFixed(1);
+    changed.push(arr[idx].id);
+  }
+  const now = new Date();
+  lastSync = now.toLocaleTimeString('th-TH', {hour12:false});
+  document.getElementById('syncTime').textContent = lastSync;
+
+  if(targetZoneId === activeZone){
+    renderGrid(changed);
+  }
+  renderTabs();
+  renderSummary();
+  renderRecommendation();
+  if(zones.find(z=>z.id===targetZoneId).cams.includes(currentCam)){
+    renderCameraPanel();
+  }
+}
+setInterval(simulateUpdate, 2600);
+simulateUpdate();
+
+// ---------- AI Parking Recommendation ----------
+function computeScore(z){
+  const avail = countAvail(z.id);
+  const q = queueCars[z.id];
+  const riskRatio = q / Math.max(avail, 1); // incoming cars vs. remaining slots
+
+  const availPart = Math.min(avail, 40) / 40 * 35;
+  const distPart = (1 - Math.min(z.walkMin, 10) / 10) * 20;
+  const riskPart = Math.min(riskRatio, 2) / 2 * 30;
+  let weatherPart = 0;
+  if(weather === 'rain') weatherPart = z.covered ? 15 : -15;
+
+  const total = availPart + distPart - riskPart + weatherPart;
+  const highRisk = riskRatio >= 1.4 || avail <= 3;
+  return { zid:z.id, avail, q, riskRatio, total, highRisk };
+}
+
+function renderRecommendation(){
+  const scores = zones.map(computeScore).sort((a,b)=> b.total - a.total);
+  const winner = scores[0];
+  const wz = zones.find(z=>z.id===winner.zid);
+  const runnerUp = scores[1];
+  const rz = zones.find(z=>z.id===runnerUp.zid);
+
+  // build reasoning sentence comparing winner to the next-best option
+  let reasonBits = [];
+  reasonBits.push(`เหลือที่ว่าง <b>${winner.avail} ช่อง</b>`);
+  reasonBits.push(`เดินประมาณ <b>${wz.walkMin} นาที</b> (${wz.distanceM} ม.)`);
+  if(winner.q > 0) reasonBits.push(`มีรถกำลังเข้าคิว <b>${winner.q} คัน</b> แต่ยังไม่เสี่ยงเต็ม`);
+  else reasonBits.push(`ไม่มีรถต่อคิวเข้า`);
+  if(weather==='rain' && wz.covered) reasonBits.push(`เป็น<b>อาคารจอดรถมีหลังคา</b> เหมาะกับสภาพฝนตก`);
+
+  let vsRunnerUp = '';
+  if(rz){
+    if(runnerUp.highRisk) vsRunnerUp = `ส่วน${rz.id==='A'?'ลาน A':'โซน '+rz.id}มีรถเข้าคิว ${runnerUp.q} คัน ขณะเหลือที่ ${runnerUp.avail} ช่อง จึง<b>เสี่ยงเต็มก่อนถึง</b>`;
+    else if(rz.walkMin > wz.walkMin) vsRunnerUp = `ส่วนโซน ${rz.id} แม้จะมีที่ว่างมากกว่า แต่ไกลกว่า ต้องเดินเพิ่มอีก ${rz.walkMin - wz.walkMin} นาที`;
+    else if(weather==='rain' && !rz.covered) vsRunnerUp = `ส่วนโซน ${rz.id} เป็นลานกลางแจ้ง ไม่เหมาะกับสภาพฝนตกตอนนี้`;
+  }
+
+  document.getElementById('recoHero').innerHTML = `
+    <div class="reco-hero-icon">🅿️</div>
+    <div style="flex:1; min-width:220px;">
+      <span class="reco-badge">แนะนำที่สุดตอนนี้</span>
+      <div class="reco-zone">โซน ${winner.zid} — ${wz.name.split('· ')[1]}</div>
+      <div class="reco-meta">
+        <span>ว่าง <b>${winner.avail}/${wz.count}</b> ช่อง</span>
+        <span>เดิน <b>${wz.walkMin} นาที</b></span>
+        <span>ระยะทาง <b>${wz.distanceM} ม.</b></span>
+        <span>${wz.covered ? 'อาคารมีหลังคา' : 'ลานกลางแจ้ง'}</span>
+      </div>
+      <div class="reco-reason">${reasonBits.join(' · ')}${vsRunnerUp ? '<br>' + vsRunnerUp : ''}</div>
+    </div>
+  `;
+
+  const cardsEl = document.getElementById('recoCards');
+  cardsEl.innerHTML = scores.map(s=>{
+    const z = zones.find(z=>z.id===s.zid);
+    const isWinner = s.zid === winner.zid;
+    let tag = isWinner ? '<span class="rc-tag ok">แนะนำ</span>'
+      : s.highRisk ? '<span class="rc-tag risk">เสี่ยงเต็ม</span>'
+      : (weather==='rain' && !z.covered) ? '<span class="rc-tag warn">กลางแจ้ง</span>'
+      : '<span class="rc-tag warn">ไม่ใช่ตัวเลือกแรก</span>';
+    return `
+      <div class="reco-card${isWinner ? ' winner' : ''}">
+        <div class="rc-head"><span class="rc-name">โซน ${s.zid}</span>${tag}</div>
+        <div class="rc-row"><span>ที่ว่าง</span><b>${s.avail}/${z.count}</b></div>
+        <div class="rc-row"><span>เดิน / ระยะทาง</span><b>${z.walkMin} นาที · ${z.distanceM} ม.</b></div>
+        <div class="rc-row"><span>รถกำลังเข้าคิว</span><b>${s.q} คัน</b></div>
+        <div class="rc-row"><span>ลักษณะลาน</span><b>${z.covered ? 'มีหลังคา' : 'กลางแจ้ง'}</b></div>
+      </div>
+    `;
+  }).join('');
+}
+
+document.getElementById('weatherToggle').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.wt-btn');
+  if(!btn) return;
+  weather = btn.dataset.w;
+  document.querySelectorAll('.wt-btn').forEach(b=>b.classList.toggle('active', b===btn));
+  renderRecommendation();
+});
+
+function driftQueueCars(){
+  zones.forEach(z=>{
+    const delta = Math.floor(Math.random()*5) - 2; // -2..+2
+    queueCars[z.id] = Math.max(0, Math.min(16, queueCars[z.id] + delta));
+  });
+  renderRecommendation();
+}
+setInterval(driftQueueCars, 4200);
+
+// ---------- Live camera viewer ----------
+function renderCameraPanel(){
+  const z = zones.find(z=>z.id===activeZone);
+  document.getElementById('camCaption').textContent = currentCam + ' · โซน ' + z.id;
+  document.getElementById('camIdHud').textContent = currentCam;
+
+  // thumbnails for this zone's cameras
+  const thumbs = document.getElementById('camThumbs');
+  thumbs.innerHTML = '';
+  z.cams.forEach(c=>{
+    const t = document.createElement('div');
+    t.className = 'cam-thumb' + (c===currentCam ? ' active' : '');
+    t.textContent = c;
+    t.onclick = ()=>{ currentCam = c; renderCameraPanel(); };
+    thumbs.appendChild(t);
+  });
+
+  // stalls this camera is watching
+  const watched = state[z.id].filter(s=>s.cam===currentCam);
+  const occupiedHere = watched.filter(s=>s.status==='occupied');
+  const isAlert = Math.random() < 0.08; // occasional simulated security flag
+
+  const boxesEl = document.getElementById('camBoxes');
+  boxesEl.innerHTML = '';
+  occupiedHere.slice(0,5).forEach((s, i)=>{
+    const b = document.createElement('div');
+    const alertThis = isAlert && i===0;
+    b.className = 'cbox' + (alertThis ? ' alert' : '');
+    const w = 16 + Math.random()*10, h = 20 + Math.random()*12;
+    const left = 8 + Math.random()*(78 - w);
+    const top = 22 + Math.random()*(58 - h);
+    b.style.left = left + '%'; b.style.top = top + '%';
+    b.style.width = w + '%'; b.style.height = h + '%';
+    b.innerHTML = `<span class="clabel">${alertThis ? 'ผิดปกติ' : 'รถยนต์'} · ${s.confidence}%</span>`;
+    boxesEl.appendChild(b);
+  });
+
+  document.getElementById('camDetectHud').textContent = 'ตรวจพบ ' + occupiedHere.length + ' คัน · ' + watched.length + ' ช่องในมุมมอง';
+  document.getElementById('camAlertHud').textContent = isAlert ? 'แจ้งเตือนความปลอดภัย' : '';
+
+  if(isAlert){
+    pushEvent('alert', `กล้อง ${currentCam} ตรวจพบเหตุการณ์ผิดปกติในลานจอด`, z.id);
+  }
+}
+
+// ---------- Event log ----------
+function pushEvent(type, text, zid){
+  const now = new Date();
+  eventsArr.unshift({ type, text, time: now.toLocaleTimeString('th-TH',{hour12:false}), zid });
+  eventsArr = eventsArr.slice(0, 10);
+  renderEventLog();
+}
+function renderEventLog(){
+  const el = document.getElementById('eventLog');
+  el.innerHTML = eventsArr.map(ev => `
+    <div class="event-item ${ev.type}">
+      <span class="edot"></span>
+      <div class="etext"><b>${ev.text}</b><span>${ev.time} · โซน ${ev.zid}</span></div>
+    </div>
+  `).join('');
+}
+function generateRandomEvent(){
+  const z = zones[Math.floor(Math.random()*zones.length)];
+  const s = state[z.id][Math.floor(Math.random()*state[z.id].length)];
+  const roll = Math.random();
+  if(roll < 0.55){
+    pushEvent('info', (s.status==='occupied' ? `รถเข้าจอดที่ช่อง ${s.id}` : `รถออกจากช่อง ${s.id}`) + ` (กล้อง ${s.cam})`, z.id);
+  } else if(roll < 0.85){
+    pushEvent('warn', `ตรวจพบการเคลื่อนไหวใกล้กล้อง ${s.cam} — ยืนยันสถานะอีกครั้งด้วยเซนเซอร์อัลตราโซนิก`, z.id);
+  } else {
+    pushEvent('alert', `อุปกรณ์ยึดกล้อง ${s.cam} สั่นผิดปกติ (Accelerometer Tamper Alert)`, z.id);
+  }
+}
+setInterval(generateRandomEvent, 3400);
+generateRandomEvent();
+generateRandomEvent();
+
+// ---------- Telemetry drift (cosmetic realism) ----------
+function driftTelemetry(){
+  document.getElementById('magVal').textContent = (96 + Math.random()*3).toFixed(1) + '%';
+  const t = (31 + Math.random()*4).toFixed(0);
+  const h = (60 + Math.random()*12).toFixed(0);
+  document.getElementById('envVal').textContent = t + '°C · ' + h + '%';
+}
+setInterval(driftTelemetry, 5000);
+
+// ================= AI Prediction System =================
+
+// ---- demand curve: typical Thai university parking demand across a day ----
+function demandFactor(hourDecimal){
+  const h = ((hourDecimal % 24) + 24) % 24;
+  const peaks = [ {h:8.75, w:1.15, amp:1.05}, {h:13.0, w:1.7, amp:0.55}, {h:16.2, w:1.4, amp:0.4} ];
+  let v = 0.16;
+  peaks.forEach(p=>{ v += p.amp * Math.exp(-Math.pow(h - p.h, 2) / (2 * p.w * p.w)); });
+  return Math.min(v, 1.2);
+}
+
+// ---- today's event scenario (randomly assigned once per load, for demo variety) ----
+const eventScenarios = [
+  { icon:'🎓', tag:'มีงานพิเศษวันนี้', title:'พิธีรับปริญญา', desc:'AI คาดการณ์จากปฏิทินกิจกรรมของมหาวิทยาลัยและรูปแบบการเข้าใช้ที่จอดในปีก่อนหน้า', extraPct:53, kind:'surge' },
+  { icon:'📝', tag:'วันสอบวันนี้', title:'วันสอบปลายภาค', desc:'ช่วงสอบทำให้รถเข้าออกลานใกล้อาคารเรียนหนาแน่นกว่าปกติในช่วงเช้า', zone:'A', minutesEarlier:22, kind:'earlyFull' },
+];
+const todayEvent = eventScenarios[Math.floor(Math.random()*eventScenarios.length)];
+const eventMultiplier = todayEvent.kind === 'surge' ? (1 + todayEvent.extraPct/100) : 1.08;
+
+// ---- core prediction: predicted occupied count for a zone N minutes ahead ----
+function predictOccupied(z, minutesAhead){
+  const now = new Date();
+  const hourNow = now.getHours() + now.getMinutes()/60;
+  const hourFuture = hourNow + minutesAhead/60;
+  const demNow = demandFactor(hourNow);
+  const demFuture = demandFactor(hourFuture) * eventMultiplier;
+  const ratio = demFuture / Math.max(demNow, 0.05);
+
+  const currentOcc = z.count - countAvail(z.id);
+  const queueBoost = (queueCars[z.id] || 0) * (minutesAhead/60) * 0.6;
+  let occ = Math.round(currentOcc * ratio + queueBoost);
+  return Math.max(0, Math.min(z.count, occ));
+}
+function predictAvail(z, minutesAhead){ return z.count - predictOccupied(z, minutesAhead); }
+function predictConfidence(minutesAhead){
+  const base = 99.2 - minutesAhead * 0.06;
+  return Math.max(90, Math.min(99.8, base + (Math.random()*0.6 - 0.3)));
+}
+function riskIcon(avail, count){
+  const ratio = avail / count;
+  if(avail <= 3 || ratio < 0.12) return '🔴';
+  if(ratio < 0.35) return '🟡';
+  return '🟢';
+}
+
+// ---- 1. Prediction Summary ----
+function renderPredictSummary(){
+  const nowTotal = zones.reduce((s,z)=> s + countAvail(z.id), 0);
+  const t15 = zones.reduce((s,z)=> s + predictAvail(z, 15), 0);
+  const t30 = zones.reduce((s,z)=> s + predictAvail(z, 30), 0);
+  const conf = (predictConfidence(15) + predictConfidence(30) + predictConfidence(0)) / 3;
+
+  document.getElementById('predictSummary').innerHTML = `
+    <div class="psum-card now">
+      <div class="psum-lbl">🟢 ว่างตอนนี้</div>
+      <div class="psum-val">${nowTotal}<span class="psum-unit">ช่อง</span></div>
+    </div>
+    <div class="psum-card m15">
+      <div class="psum-lbl">⏳ อีก 15 นาที</div>
+      <div class="psum-val">${t15}<span class="psum-unit">ช่อง</span></div>
+    </div>
+    <div class="psum-card m30">
+      <div class="psum-lbl">⏳ อีก 30 นาที</div>
+      <div class="psum-val">${t30}<span class="psum-unit">ช่อง</span></div>
+    </div>
+    <div class="psum-card conf">
+      <div class="psum-lbl">🎯 AI Confidence</div>
+      <div class="psum-val">${conf.toFixed(1)}<span class="psum-unit">%</span></div>
+    </div>
+  `;
+  return { nowTotal, t15, t30, conf };
+}
+
+// ---- 2. Occupancy Forecast bars ----
+function renderForecastBars(){
+  const horizons = [
+    {m:0, lbl:'ตอนนี้'}, {m:15, lbl:'อีก 15 นาที'}, {m:30, lbl:'อีก 30 นาที'}, {m:60, lbl:'อีก 60 นาที'}
+  ];
+  document.getElementById('forecastBars').innerHTML = zones.map(z=>{
+    const rows = horizons.map(h=>{
+      const av = h.m===0 ? countAvail(z.id) : predictAvail(z, h.m);
+      const pct = Math.round((av / z.count) * 100);
+      return `
+        <div class="forecast-row">
+          <div class="fr-lbl">${h.lbl}</div>
+          <div class="fr-track"><div class="fr-fill" style="width:${pct}%"></div></div>
+          <div class="fr-val">${av}/${z.count}</div>
+        </div>
+      `;
+    }).join('');
+    return `<div class="forecast-zone"><div class="fz-name">ลาน ${z.id} — ${z.name.split('· ')[1]}</div>${rows}</div>`;
+  }).join('');
+}
+
+// ---- 4. Explainable AI weight bars ----
+const aiWeights = [
+  { lbl:'Occupancy', pct:42 }, { lbl:'Distance', pct:28 }, { lbl:'Traffic', pct:15 },
+  { lbl:'Weather', pct:10 }, { lbl:'Event', pct:5 },
+];
+function renderWeightBars(){
+  document.getElementById('weightBars').innerHTML = aiWeights.map(w=>`
+    <div class="weight-row">
+      <div class="wr-lbl">${w.lbl}</div>
+      <div class="wr-track"><div class="wr-fill" style="width:${w.pct}%"></div></div>
+      <div class="wr-val">${w.pct}%</div>
+    </div>
+  `).join('');
+}
+
+// ---- 5. Prediction Table ----
+function renderPredictTable(){
+  document.getElementById('predictTableBody').innerHTML = zones.map(z=>{
+    const now = countAvail(z.id);
+    const a15 = predictAvail(z, 15), a30 = predictAvail(z, 30), a60 = predictAvail(z, 60);
+    return `
+      <tr>
+        <td class="zn-cell">ลาน ${z.id}<small>${z.name.split('· ')[1]}</small></td>
+        <td>${now}</td><td>${a15}</td><td>${a30}</td><td>${a60}</td>
+        <td><span class="risk-pill">${riskIcon(a60, z.count)}</span></td>
+      </tr>
+    `;
+  }).join('');
+  document.getElementById('predictTableSync').textContent = 'อัปเดตล่าสุด ' + (lastSync !== '--:--:--' ? lastSync : new Date().toLocaleTimeString('th-TH',{hour12:false}));
+}
+
+// ---- 6. Peak Time Prediction ----
+const peakSlots = ['08:45','09:00','09:30','10:00','11:00'];
+function renderPeakChart(){
+  const now = new Date();
+  const curHourStr = String(now.getHours()).padStart(2,'0') + ':' + (now.getMinutes() < 30 ? '00' : '30');
+  const vals = peakSlots.map(t=>{
+    const [hh,mm] = t.split(':').map(Number);
+    return demandFactor(hh + mm/60) * eventMultiplier;
+  });
+  const max = Math.max(...vals, 1);
+  document.getElementById('peakChart').innerHTML = peakSlots.map((t,i)=>{
+    const pct = Math.round((vals[i]/max)*100);
+    const isNow = t === curHourStr || (i===0 && now.getHours() < 9);
+    return `
+      <div class="peak-row${isNow ? ' now' : ''}">
+        <div class="pr-lbl">${t}</div>
+        <div class="pr-track"><div class="pr-fill" style="width:${pct}%"></div></div>
+        <div class="pr-pct">${pct}%</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ---- 11. Heatmap ----
+function renderHeatmap(){
+  const cellColors = ['#22D3B8','#22D3B8','#FBBF24','#FBBF24','#FF6B7A','#FF6B7A'];
+  document.getElementById('heatmapWrap').innerHTML = zones.map(z=>{
+    const a0 = countAvail(z.id), a60 = predictAvail(z, 60);
+    const startRatio = a0 / z.count, endRatio = a60 / z.count;
+    const cells = [0,1,2,3,4,5].map(i=>{
+      const t = i/5;
+      const ratio = startRatio + (endRatio - startRatio) * t;
+      let color;
+      if(ratio > 0.55) color = cellColors[0];
+      else if(ratio > 0.35) color = cellColors[2];
+      else if(ratio > 0.18) color = cellColors[2];
+      else color = cellColors[4];
+      return `<div class="heat-cell" style="background:${color};"></div>`;
+    }).join('');
+    return `<div class="heat-row"><div class="hz-lbl">ลาน ${z.id}</div><div class="heat-cells">${cells}</div></div>`;
+  }).join('');
+}
+
+// ---- 7. Event Prediction card ----
+function renderEventCard(){
+  const ev = todayEvent;
+  let body;
+  if(ev.kind === 'surge'){
+    body = `<div class="mp-highlight">+${ev.extraPct}%</div><div class="mp-desc" style="margin-top:4px;">คาดว่ารถเข้าใช้ลานจอดเพิ่มขึ้นจากค่าเฉลี่ยปกติ</div>`;
+  } else {
+    body = `<div class="mp-highlight">เร็วขึ้น ${ev.minutesEarlier} นาที</div><div class="mp-desc" style="margin-top:4px;">ลาน ${ev.zone} คาดว่าจะเต็มเร็วกว่าค่าเฉลี่ยปกติ</div>`;
+  }
+  document.getElementById('eventCard').innerHTML = `
+    <div class="mp-eyebrow">Event Prediction</div>
+    <div class="mp-icon">${ev.icon}</div>
+    <div class="mp-title">${ev.tag} — ${ev.title}</div>
+    ${body}
+  `;
+}
+
+// ---- 8 & 14. Weather Prediction + Smart Suggestion ----
+function renderWeatherCard(){
+  const coveredZone = zones.find(z=>z.covered);
+  const isRain = weather === 'rain';
+  document.getElementById('weatherPredictCard').innerHTML = `
+    <div class="mp-eyebrow">Weather Prediction</div>
+    <div class="mp-icon">${isRain ? '🌧️' : '☀️'}</div>
+    <div class="mp-title">${isRain ? 'ฝนตกในพื้นที่' : 'อากาศแจ่มใส'}</div>
+    <div class="mp-desc">${isRain
+      ? `AI แนะนำ <b style="color:var(--text-hi)">อาคารจอดรถมีหลังคา — โซน ${coveredZone ? coveredZone.id : 'B'}</b> เพื่อเลี่ยงฝน`
+      : 'สภาพอากาศไม่ส่งผลต่อการคาดการณ์ที่จอดในขณะนี้'}</div>
+  `;
+
+  document.getElementById('suggestCard').innerHTML = `
+    <div class="mp-eyebrow">Smart Suggestion</div>
+    <div class="mp-icon">${isRain ? '☔' : '💡'}</div>
+    <div class="mp-title">${isRain ? 'ฝนตก → เลือกอาคารมีหลังคา' : 'เดินทางตามคำแนะนำ AI'}</div>
+    <div class="mp-desc">${isRain
+      ? `ระบบปรับน้ำหนักปัจจัย Weather ในการให้คะแนนโซนโดยอัตโนมัติ`
+      : `เข้าลานจอดก่อนช่วงพีค 08:15 น. เพื่อหลีกเลี่ยงความหนาแน่น`}</div>
+  `;
+}
+
+// ---- 9. Notification (fill warning) ----
+function renderNotifCard(){
+  let soonest = null;
+  for(const z of zones){
+    for(const m of [10,20,30,40,50,60]){
+      if(predictAvail(z, m) <= 0){
+        if(!soonest || m < soonest.m) soonest = { zid:z.id, m };
+        break;
+      }
+    }
+  }
+  if(soonest){
+    document.getElementById('notifCard').innerHTML = `
+      <div class="mp-eyebrow">⚠ Notification</div>
+      <div class="notif-countdown">${soonest.m}<span>นาที จนกว่า ลาน ${soonest.zid} จะเต็ม</span></div>
+      <div class="mp-desc" style="margin-top:8px;">ระบบจะแจ้งเตือนอัตโนมัติเมื่อที่ว่างเหลือต่ำกว่า 5 ช่อง</div>
+    `;
+  } else {
+    document.getElementById('notifCard').innerHTML = `
+      <div class="mp-eyebrow">⚠ Notification</div>
+      <div class="mp-icon">✅</div>
+      <div class="mp-title">ยังไม่มีลานใดเสี่ยงเต็มใน 60 นาทีนี้</div>
+      <div class="mp-desc">ระบบจะแจ้งเตือนทันทีเมื่อพบแนวโน้มลานใกล้เต็ม</div>
+    `;
+  }
+}
+
+// ---- 10. Carbon Saving ----
+function renderCarbonCard(){
+  const totalOcc = zones.reduce((s,z)=> s + (z.count - countAvail(z.id)), 0);
+  const hoursSaved = (totalOcc * 0.9 + Math.random()*4).toFixed(0);
+  const kmSaved = (totalOcc * 3.5 + Math.random()*10).toFixed(0);
+  const co2Saved = (totalOcc * 0.7 + Math.random()*3).toFixed(0);
+  document.getElementById('carbonCard').innerHTML = `
+    <div class="mp-eyebrow">🌱 Carbon Saving วันนี้</div>
+    <div class="carbon-grid" style="margin-top:8px;">
+      <div class="stat-mini"><div class="sm-val">${hoursSaved}</div><div class="sm-lbl">ชม. ประหยัด</div></div>
+      <div class="stat-mini"><div class="sm-val">${kmSaved}</div><div class="sm-lbl">กม. ลดระยะ</div></div>
+      <div class="stat-mini"><div class="sm-val">${co2Saved}</div><div class="sm-lbl">กก. ลด CO₂</div></div>
+    </div>
+  `;
+}
+
+// ---- 12. Confidence Score ----
+function renderConfidenceCard(){
+  let sum = 0, n = 0;
+  zones.forEach(z=> state[z.id].forEach(s=>{ sum += parseFloat(s.confidence); n++; }));
+  const overall = n ? sum/n : 96;
+  const starCount = Math.round(overall/20);
+  document.getElementById('confidenceCard').innerHTML = `
+    <div class="mp-eyebrow">🎯 Confidence Score</div>
+    <div class="mp-highlight" style="color:var(--teal);">${overall.toFixed(1)}%</div>
+    <div class="stars" style="margin-top:6px;">${'★'.repeat(starCount)}${'☆'.repeat(5-starCount)}</div>
+    <div class="mp-desc" style="margin-top:8px;">ค่าความเชื่อมั่นเฉลี่ยของโมเดลจากทุกช่องจอดที่ตรวจับได้</div>
+  `;
+}
+
+// ---- 15. Learning Model ----
+function renderModelCard(){
+  const overallAcc = (94 + Math.random()*3).toFixed(1);
+  const today = new Date().toLocaleDateString('th-TH', {day:'numeric', month:'short', year:'numeric'});
+  document.getElementById('modelCard').innerHTML = `
+    <div class="mp-eyebrow">📚 Learning Model</div>
+    <div class="model-rows">
+      <div class="mrow"><span>Training Data</span><b>90 วัน</b></div>
+      <div class="mrow"><span>Accuracy</span><b>${overallAcc}%</b></div>
+      <div class="mrow"><span>Updated</span><b>${today}</b></div>
+    </div>
+  `;
+}
+
+// ---- 13. AI Insight (narrative summary) ----
+function renderAiInsight(){
+  let bestSlot = peakSlots[0], bestVal = -1;
+  peakSlots.forEach(t=>{
+    const [hh,mm] = t.split(':').map(Number);
+    const v = demandFactor(hh+mm/60) * eventMultiplier;
+    if(v > bestVal){ bestVal = v; bestSlot = t; }
+  });
+  const scores = zones.map(z=>({ zid:z.id, avail60:predictAvail(z,60) })).sort((a,b)=> b.avail60 - a.avail60);
+  const best = scores[0];
+  document.getElementById('aiInsightBody').innerHTML = `
+    วันนี้ AI คาดการณ์ว่าช่วง <b>08:30–09:30 น.</b> รถจะหนาแน่นที่สุด (จุดสูงสุดโดยประมาณราว <b>${bestSlot} น.</b>)
+    ${todayEvent.kind==='surge' ? `และมี<b>${todayEvent.title}</b>ทำให้ความหนาแน่นเพิ่มขึ้นอีก <b>${todayEvent.extraPct}%</b> จากปกติ` : `ประกอบกับ<b>${todayEvent.title}</b>ในวันนี้`}
+    ควรเข้ามหาวิทยาลัยก่อน <b>08:15 น.</b> หรือเลือกจอดที่ <b>ลาน ${best.zid}</b> ซึ่งคาดว่าจะยังมีที่ว่างเหลือมากที่สุดในอีก 60 นาทีข้างหน้า
+  `;
+}
+
+// ---- master render for the whole prediction system ----
+function renderPredictionSystem(){
+  renderPredictSummary();
+  renderForecastBars();
+  renderWeightBars();
+  renderPredictTable();
+  renderPeakChart();
+  renderHeatmap();
+  renderEventCard();
+  renderWeatherCard();
+  renderNotifCard();
+  renderCarbonCard();
+  renderConfidenceCard();
+  renderModelCard();
+  renderAiInsight();
+}
+
+renderPredictionSystem();
+setInterval(renderPredictionSystem, 5200);
+
+// keep weather toggle (already wired to renderRecommendation) also refreshing prediction cards
+document.getElementById('weatherToggle').addEventListener('click', (e)=>{
+  if(e.target.closest('.wt-btn')) renderPredictionSystem();
+});
+</script>
+
+</body>
+</html>
